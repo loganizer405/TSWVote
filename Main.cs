@@ -88,7 +88,13 @@ namespace TSWVote
             {
                 Commands.ChatCommands.Add(new Command("", Vote, "vote"));
                 Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
+                //This is so it will tell you if a new version is availiable.
+                Commands.ChatCommands.Add(new Command("vote.checkversion", CheckVersion, "tswversioncheck"));
             }
+        }
+        public void CheckVersion(CommandArgs e)
+        {
+            e.Player.SendInfoMessage(Version.ToString());
         }
         public void Vote(CommandArgs e)
         {
