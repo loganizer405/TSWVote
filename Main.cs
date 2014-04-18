@@ -86,7 +86,7 @@ namespace TSWVote
             }
             else
             {
-                Commands.ChatCommands.Add(new Command("server.vote", Vote, "vote"));
+                Commands.ChatCommands.Add(new Command("", Vote, "vote"));
                 Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
             }
         }
