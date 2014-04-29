@@ -6,10 +6,11 @@ using Newtonsoft.Json;
 
 namespace TSWVote
 {
-    class Response
+    public class Response
     {
         public string response;
         public string message;
+        public string question;
 
         public static Response Read(string text)
         {
