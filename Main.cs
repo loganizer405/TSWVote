@@ -320,7 +320,7 @@ namespace TSWVote
                     doVote(args);
                     SendError("Vote", response.message);
                     break;
-                case "capchafail":
+                case "captchafail":
                     args.Player.SendErrorMessage("[TServerWeb] Vote failed! Reason: " + response.message);
                     break;
                 case "":
