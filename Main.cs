@@ -307,7 +307,7 @@ namespace TSWVote
                     args.Player.SendSuccessMessage("[TServerWeb] " + response.message);
                     break;
                 case "failure":
-                    args.Player.SendErrorMessage("[TServerWeb] Vote failed! Your answer was incorrect, please try again.");
+                    args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
                     SendError("Vote", response.message);
                     break;
                 case "captcha":
@@ -320,8 +320,12 @@ namespace TSWVote
                     doVote(args);
                     SendError("Vote", response.message);
                     break;
+                case "capchafail":
+                    args.Player.SendErrorMessage("[TServerWeb] Vote failed! Reason: " + response.message);
+                    break;
                 case "":
                 case null:
+                default:
                     args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
                     SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
                     break;
