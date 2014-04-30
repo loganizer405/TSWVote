@@ -6,15 +6,15 @@ using Newtonsoft.Json;
 
 namespace TSWVote
 {
-    internal class Response
-    {
-        public string response;
-        public string message;
-        public string question;
+	internal class Response
+	{
+		public string response;
+		public string message;
+		public string question;
 
-        public static Response Read(string text)
-        {
-            return JsonConvert.DeserializeObject<Response>(text);
-        }
-    }
+		public static Response Read(string text)
+		{
+			return JsonConvert.DeserializeObject<Response>(text);
+		}
+	}
 }
