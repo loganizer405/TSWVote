@@ -97,7 +97,7 @@ namespace TSWVote
 				return;
 			}
 
-			Match M = Regex.Match(args.Text, "/vote( ?.*)", RegexOptions.IgnoreCase);
+			Match M = Regex.Match(args.Text, "/vote(.*)", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
 				args.Handled = true;
