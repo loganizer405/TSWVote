@@ -97,26 +97,25 @@ namespace TSWVote
 				return;
 			}
 
-			Match M = Regex.Match(args.Text, "/vote(.*)", RegexOptions.IgnoreCase);
+			Match M = Regex.Match(args.Text, "/vote( ?)(.*)", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
-				string Args = M.Groups[1].Value;
+				bool Space = M.Groups[1].Value == " ";
+				string Args = M.Groups[2].Value;
 
-				if (Args[0] == ' ')
+				if (!string.IsNullOrWhiteSpace(Args) && Space)
 				{
-					args.Handled = true;
-
-					if (!string.IsNullOrWhiteSpace(Args))
-					{
-						e.Parameters.Add(M.Groups[1].Value.Substring(1));
-						TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
-					}
-					else
-					{
-						TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
-					}
+					e.Parameters.Add(Args);
+					TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
 					Vote(e);
+					args.Handled = true;
+				}
+				else if (string.IsNullOrWhiteSpace(Args))
+				{
+					TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
+					Vote(e);
+					args.Handled = true;
 				}
 			}
 		}
