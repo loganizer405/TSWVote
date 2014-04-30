@@ -101,12 +101,20 @@ namespace TSWVote
 			if (M.Success)
 			{
 				args.Handled = true;
+
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
 				string Args = M.Groups[1].Value;
-				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
-					e.Parameters.Add(M.Groups[1].Value.Substring(1));
 
-				TSPlayer.Server.SendInfoMessage(string.Format("{0} is executing: {1}.", player.Name, args.Text));
+				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
+				{
+					e.Parameters.Add(M.Groups[1].Value.Substring(1));
+					TSPlayer.Server.SendMessage(player.Name + " entered /vote captcha.", 255, 255, 255);
+				}
+				else
+				{
+					TSPlayer.Server.SendMessage(player.Name + " executed /vote.", 255, 255, 255);
+				}
+				
 				Vote(e);
 			}
 		}
