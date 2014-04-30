@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Reflection;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
@@ -18,9 +19,13 @@ namespace TSWVote
     [ApiVersion(1, 15)]
     public class TSWVote : TerrariaPlugin
     {
-        private WebClient webClient;
+        private WebClient webClient; // Concurrency issues here
 
-        public string path = Path.Combine(TShock.SavePath, "TSWVote.txt");
+		public string ConfigPath
+		{
+			get { return Path.Combine(TShock.SavePath, "TSWVote.txt"); }
+		}
+
         public override string Name
         {
             get
@@ -49,7 +54,7 @@ namespace TSWVote
         {
             get
             {
-                return new Version("2.0");
+				return Assembly.GetExecutingAssembly().GetName().Version;
             }
         }
 
@@ -118,14 +123,15 @@ namespace TSWVote
             args.Handled = true;
         }
 
-        public void OnInitialize(EventArgs args)
+        private void OnInitialize(EventArgs args)
         {
-            if (!File.Exists(Path.Combine(TShock.SavePath, "TSWVote.txt")))
+            if (!File.Exists(ConfigPath))
             {
                 string[] text = {"**This is the configuration file, please do not edit.**", "Help page: http://www.tserverweb.com/help/",
                                     "Server ID is on next line. Please DO NOT edit the following line, change it using \"/tserverweb [ID] in-game\"",
                                 "0"};
-                File.WriteAllLines(Path.Combine(TShock.SavePath, "TSWVote.txt"), text);
+
+                File.WriteAllLines(ConfigPath, text);
             }
             else
             {
@@ -147,18 +153,18 @@ namespace TSWVote
             }
         }
 
-        public void CheckVersion(CommandArgs e)
+        private void CheckVersion(CommandArgs e)
         {
             e.Player.SendInfoMessage(Version.ToString());
         }
 
-        public void tswQuery(string url, object userToken = null)
+        private void tswQuery(string url, object userToken = null)
         {
             Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
             this.webClient.DownloadStringAsync(uri, userToken);
         }
 
-        public void validateCAPTCHA(CommandArgs e)
+        private void validateCAPTCHA(CommandArgs e)
         {
             int id;
             string message;
@@ -172,11 +178,11 @@ namespace TSWVote
             string answer = HttpUtility.UrlPathEncode(e.Parameters[0].ToString());
             string playerName = HttpUtility.UrlPathEncode(e.Player.Name);
 
-            string url = "answer=" + answer + "&user=" + playerName + "&sid=" + id;
+			string url = string.Format("answer={0}&user={1}&sid={2}", answer, playerName, id);
             tswQuery(url, e);
         }
 
-        public void doVote(CommandArgs e)
+        private void doVote(CommandArgs e)
         {
             int id;
             string message;
@@ -187,11 +193,11 @@ namespace TSWVote
                 return;
             }
 
-            string url = "user=" + HttpUtility.UrlPathEncode(e.Player.Name) + "&sid=" + id;
+			string url = string.Format("user={0}&sid={1}", HttpUtility.UrlPathEncode(e.Player.Name), id);
             tswQuery(url, e);
         }
 
-        public void Vote(CommandArgs e)
+        private void Vote(CommandArgs e) // To be fair this should also have a permission.
         {
             try
             {
@@ -213,7 +219,7 @@ namespace TSWVote
             }
         }
 
-        public void ChangeID(CommandArgs e)
+        private void ChangeID(CommandArgs e)
         {
             if (e.Parameters.Count == 0)
             {
@@ -246,7 +252,7 @@ namespace TSWVote
                     newId.ToString()
                 };
 
-                File.WriteAllLines(Path.Combine(TShock.SavePath, "TSWVote.txt"), text);
+                File.WriteAllLines(ConfigPath, text);
                 e.Player.SendInfoMessage("[TServerWeb] Server ID successfully changed to " + newId + "!");
                 return;
             }
@@ -254,17 +260,16 @@ namespace TSWVote
             e.Player.SendErrorMessage("[TServerWeb] Number not specified! Please type /tserverweb [number]");
         }
 
-        public void SendError(string typeoffailure, string message)
+        private void SendError(string typeoffailure, string message)
         {
-            Log.Error("[TServerWeb] TSWVote Error: " + typeoffailure + "failure. Reason: " + message);
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("[TServerWeb] TSWVote Error: " + typeoffailure + " failure. Reason: " + message);
-            Console.ResetColor();
+			string Error = string.Format("[TServerWeb] TSWVote Error: {0} failure. Reason: {1}", typeoffailure, message);
+            Log.Error(Error);
+			TSPlayer.Server.SendErrorMessage(Error);
         }
 
-        public bool GetServerID(out int id, out string message)
+        private bool GetServerID(out int id, out string message)
         {
-            string[] stringid = File.ReadAllLines(Path.Combine(TShock.SavePath, "TSWVote.txt"));
+            string[] stringid = File.ReadAllLines(ConfigPath);
             foreach (string str in stringid)
             {
                 if (int.TryParse(str, out id))
@@ -285,7 +290,7 @@ namespace TSWVote
             return false;
         }
 
-        private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
+		private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
         {
             CommandArgs args = e.UserState as CommandArgs;
             if (args == null)

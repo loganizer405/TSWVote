@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace TSWVote
 {
-    public class Response
+    internal class Response
     {
         public string response;
         public string message;
