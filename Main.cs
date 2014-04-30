@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Reflection;
 using Terraria;
 using TerrariaApi.Server;
@@ -12,14 +13,12 @@ using Newtonsoft.Json;
 using System.Web;
 using System.Net;
 
-
-
 namespace TSWVote
 {
 	[ApiVersion(1, 15)]
 	public class TSWVote : TerrariaPlugin
 	{
-		private WebClient webClient; // Concurrency issues here
+		//private WebClient webClient; // Concurrency issues here
 
 		public string ConfigPath
 		{
@@ -28,45 +27,35 @@ namespace TSWVote
 
 		public override string Name
 		{
-			get
-			{
-				return "TServerWebVote";
-			}
+			get { return "TServerWebVote"; }
 		}
 
 		public override string Author
 		{
-			get
-			{
-				return "Loganizer + XGhozt";
-			}
+			get { return "Loganizer + XGhozt"; }
 		}
 
 		public override string Description
 		{
-			get
-			{
-				return "A plugin to vote to TServerWeb in-game.";
-			}
+			get { return "A plugin to vote to TServerWeb in-game."; }
 		}
 
 		public override Version Version
 		{
-			get
-			{
-				return Assembly.GetExecutingAssembly().GetName().Version;
-			}
+			get { return Assembly.GetExecutingAssembly().GetName().Version; }
 		}
 
 		public TSWVote(Main game)
 			: base(game)
 		{
 			Order = 1000;
-
+			WebRequest.DefaultWebProxy = null;
+			/*
 			this.webClient = new WebClient();
 			this.webClient.Proxy = null;
 			this.webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
 			this.webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
+			 */
 		}
 
 		public override void Initialize()
@@ -82,45 +71,43 @@ namespace TSWVote
 				ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
 				ServerApi.Hooks.ServerChat.Deregister(this, OnChat);
 
+				/*
 				if (this.webClient != null)
 				{
 					this.webClient.DownloadStringCompleted -= WebClient_DownloadStringCompleted;
 					this.webClient.Dispose();
 				}
+				 */
 			}
 			base.Dispose(disposing);
 		}
 
 		private void OnChat(ServerChatEventArgs args)
 		{
-			//check if its chat packet otherwise ignore
-			if (string.IsNullOrWhiteSpace(args.Text) || !args.Text.StartsWith("/"))
+			if (!args.Text.StartsWith("/"))
 			{
 				return;
 			}
-			//make sure player exists and isn't null
+
 			var player = TShock.Players[args.Who];
-			//make sure message passed isn't null
+
 			if (player == null)
 			{
+				args.Handled = true;
 				return;
 			}
-			//remove '/'
-			string cmdText = args.Text.Remove(0, 1);
-			//change message into list of params
-			var cmdArgs = cmdText.Split(' ').ToList();
-			//get command name
-			string cmdName = cmdArgs[0].ToLower();
-			//remove the command name
-			cmdArgs.RemoveAt(0);
-			//check if its vote
-			if (cmdName != "vote")
+
+			Match M = Regex.Match(args.Text, "/vote( ?.*)", RegexOptions.IgnoreCase);
+			if (M.Success)
 			{
-				return;
+				args.Handled = true;
+				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
+				string Args = M.Groups[1].Value;
+				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
+					e.Parameters.Add(M.Groups[1].Value.Substring(1));
+
+				Vote(e);
 			}
-			Vote(new CommandArgs(args.Text, player, new List<string> { string.Join(" ", cmdArgs) }));
-			//stops return of command
-			args.Handled = true;
 		}
 
 		private void OnInitialize(EventArgs args)
@@ -158,10 +145,13 @@ namespace TSWVote
 			e.Player.SendInfoMessage(Version.ToString());
 		}
 
-		private void tswQuery(string url, object userToken = null)
+		private void tswQuery(string url, object userToken = null) // Not sure if this works.
 		{
 			Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
-			this.webClient.DownloadStringAsync(uri, userToken);
+			WebClient WC = new WebClient() { Proxy = null };
+			WC.Headers.Add("user-agent", "TServerWeb Vote Plugin");
+			WC.DownloadStringCompleted += WebClient_DownloadStringCompleted;
+			WC.DownloadStringAsync(uri, userToken);
 		}
 
 		private void validateCAPTCHA(CommandArgs e)
