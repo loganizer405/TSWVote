@@ -106,6 +106,7 @@ namespace TSWVote
 				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
 					e.Parameters.Add(M.Groups[1].Value.Substring(1));
 
+				TSPlayer.Server.SendInfoMessage(string.Format("{0} is executing: {1}.", player.Name, args.Text));
 				Vote(e);
 			}
 		}
