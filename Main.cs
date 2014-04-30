@@ -116,11 +116,8 @@ namespace TSWVote
 					{
 						TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
 					}
+					Vote(e);
 				}
-
-				// Add logging here
-				
-				Vote(e);
 			}
 		}
 
