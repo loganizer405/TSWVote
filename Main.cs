@@ -100,19 +100,22 @@ namespace TSWVote
 			Match M = Regex.Match(args.Text, "/vote(.*)", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
-				args.Handled = true;
-
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
 				string Args = M.Groups[1].Value;
 
-				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
+				if (Args[0] == ' ')
 				{
-					e.Parameters.Add(M.Groups[1].Value.Substring(1));
-					TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
-				}
-				else
-				{
-					TSPlayer.Server.SendMessage(player.Name + " executed /vote.", 255, 255, 255);
+					args.Handled = true;
+
+					if (!string.IsNullOrWhiteSpace(Args))
+					{
+						e.Parameters.Add(M.Groups[1].Value.Substring(1));
+						TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
+					}
+					else
+					{
+						TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
+					}
 				}
 
 				// Add logging here
