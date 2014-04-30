@@ -148,7 +148,7 @@ namespace TSWVote
 		private void tswQuery(string url, object userToken = null) // Not sure if this works.
 		{
 			Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
-			WebClient WC = new WebClient() { Proxy = null };
+			VoteWC WC = new VoteWC() { Proxy = null };
 			WC.Headers.Add("user-agent", "TServerWeb Vote Plugin");
 			WC.DownloadStringCompleted += WebClient_DownloadStringCompleted;
 			WC.DownloadStringAsync(uri, userToken);
@@ -324,6 +324,17 @@ namespace TSWVote
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 					SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
 					break;
+			}
+		}
+
+		private class VoteWC : WebClient
+		{
+			public const int Timeout = 2000; // Milliseconds
+			protected override WebRequest GetWebRequest(Uri uri)
+			{
+				WebRequest w = base.GetWebRequest(uri);
+				w.Timeout = Timeout;
+				return w;
 			}
 		}
 	}
