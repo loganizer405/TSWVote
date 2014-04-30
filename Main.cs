@@ -108,12 +108,14 @@ namespace TSWVote
 				if (!string.IsNullOrWhiteSpace(Args) && Args[0] == ' ')
 				{
 					e.Parameters.Add(M.Groups[1].Value.Substring(1));
-					TSPlayer.Server.SendMessage(player.Name + " entered /vote captcha.", 255, 255, 255);
+					TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
 				}
 				else
 				{
 					TSPlayer.Server.SendMessage(player.Name + " executed /vote.", 255, 255, 255);
 				}
+
+				// Add logging here
 				
 				Vote(e);
 			}
@@ -339,7 +341,7 @@ namespace TSWVote
 
 		private class VoteWC : WebClient
 		{
-			public const int Timeout = 2000; // Milliseconds
+			public static int Timeout = 2000; // Milliseconds
 			protected override WebRequest GetWebRequest(Uri uri)
 			{
 				WebRequest w = base.GetWebRequest(uri);
