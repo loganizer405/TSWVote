@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.IO;
 using System.Collections.Generic;
@@ -18,7 +19,10 @@ namespace TSWVote
     [ApiVersion(1, 15)]
     public class TSWVote : TerrariaPlugin
     {
-        private WebClient webClient;
+
+        private const int NumberOfWebClientsAvailable = 15;
+
+        private ConcurrentQueue<WebClient> webClientQueue;
 
         public string path = Path.Combine(TShock.SavePath, "TSWVote.txt");
         public override string Name
@@ -33,7 +37,7 @@ namespace TSWVote
         {
             get
             {
-                return "Loganizer + XGhozt";
+                return "Loganizer & XGhozt (Special thanks to CytoDev, Simon311, Ijwu, Khoatic)";
             }
         }
 
@@ -49,7 +53,7 @@ namespace TSWVote
         {
             get
             {
-                return new Version("2.0");
+                return new Version("2.1");
             }
         }
 
@@ -58,10 +62,16 @@ namespace TSWVote
         {
             Order = 1000;
 
-            this.webClient = new WebClient();
-            this.webClient.Proxy = null;
-            this.webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
-            this.webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
+            this.webClientQueue = new ConcurrentQueue<WebClient>();
+            for (int i = 0; i < NumberOfWebClientsAvailable; i++)
+            {
+                WebClient webClient = new WebClient();
+                webClient.Proxy = null;
+                webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
+                webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
+
+                this.webClientQueue.Enqueue(webClient);
+            }
         }
 
         public override void Initialize()
@@ -77,10 +87,14 @@ namespace TSWVote
                 ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
                 ServerApi.Hooks.ServerChat.Deregister(this, OnChat);
 
-                if (this.webClient != null)
+                if (this.webClientQueue != null)
                 {
-                    this.webClient.DownloadStringCompleted -= WebClient_DownloadStringCompleted;
-                    this.webClient.Dispose();
+                    WebClient webClient;
+                    while (this.webClientQueue.TryDequeue(out webClient))
+                    {
+                        webClient.DownloadStringCompleted -= WebClient_DownloadStringCompleted;
+                        webClient.Dispose();
+                    }
                 }
             }
             base.Dispose(disposing);
@@ -113,8 +127,16 @@ namespace TSWVote
             {
                 return;
             }
-            Vote(new CommandArgs(args.Text, player, new List<string> { string.Join(" ", cmdArgs) }));
-            //stops return of command
+
+            if (cmdArgs.Count > 0)
+            {
+                Vote(new CommandArgs(args.Text, player, new List<string> { string.Join(" ", cmdArgs) }));
+
+            }
+            else
+            {
+                Vote(new CommandArgs(args.Text, player, new List<string>()));
+            }
             args.Handled = true;
         }
 
@@ -140,7 +162,7 @@ namespace TSWVote
             }
             else
             {
-                // Commands.ChatCommands.Add(new Command("", Vote, "vote"));
+
                 Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
                 // This is so it will tell you if a new version is availiable.
                 Commands.ChatCommands.Add(new Command("vote.checkversion", CheckVersion, "tswversioncheck"));
@@ -152,10 +174,18 @@ namespace TSWVote
             e.Player.SendInfoMessage(Version.ToString());
         }
 
-        public void tswQuery(string url, object userToken = null)
+        public bool tswQuery(string url, object userToken = null)
         {
             Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
-            this.webClient.DownloadStringAsync(uri, userToken);
+
+            WebClient webClient;
+            if (this.webClientQueue.TryDequeue(out webClient))
+            {
+                webClient.DownloadStringAsync(uri, userToken);
+                return true;
+            }
+
+            return false;
         }
 
         public void validateCAPTCHA(CommandArgs e)
@@ -173,10 +203,14 @@ namespace TSWVote
             string playerName = HttpUtility.UrlPathEncode(e.Player.Name);
 
             string url = "answer=" + answer + "&user=" + playerName + "&sid=" + id;
-            tswQuery(url, e);
+            if (!tswQuery(url, e))
+            {
+                // this happens when there are more than NumberOfWebClientsAvailable requests being executed at once
+                e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
+            }
         }
 
-        public void doVote(CommandArgs e)
+        private void doVote(CommandArgs e)
         {
             int id;
             string message;
@@ -188,10 +222,14 @@ namespace TSWVote
             }
 
             string url = "user=" + HttpUtility.UrlPathEncode(e.Player.Name) + "&sid=" + id;
-            tswQuery(url, e);
+            if (!tswQuery(url, e))
+            {
+                // this happens when there are more than NumberOfWebClientsAvailable requests being executed at once
+                e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
+            }
         }
 
-        public void Vote(CommandArgs e)
+        private void Vote(CommandArgs e)
         {
             try
             {
@@ -213,7 +251,7 @@ namespace TSWVote
             }
         }
 
-        public void ChangeID(CommandArgs e)
+        private void ChangeID(CommandArgs e)
         {
             if (e.Parameters.Count == 0)
             {
@@ -287,18 +325,36 @@ namespace TSWVote
 
         private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
         {
+            WebClient webClient = sender as WebClient;
             CommandArgs args = e.UserState as CommandArgs;
             if (args == null)
+            {
+                // put this WebClient back into the pool of available WebClients
+                ReuseWebClient(webClient);
                 return;
+            }
 
             if (e.Error != null)
             {
                 args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
                 SendError("Exception", e.Error.Message);
+
+                // put this WebClient back into the pool of available WebClients
+                ReuseWebClient(webClient);
                 return;
             }
 
             Response response = Response.Read(e.Result);
+            if (response == null)
+            {
+                args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
+                SendError("Response", "Invalid response received.");
+                
+                // put this WebClient back into the pool of available WebClients
+                ReuseWebClient(webClient);
+                return;
+            }
+
             switch (response.response)
             {
                 case "success":
@@ -325,11 +381,22 @@ namespace TSWVote
                     break;
                 case "":
                 case null:
-                default:
+
                     args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
                     SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
                     break;
             }
+
+            // put this WebClient back into the pool of available WebClients
+            ReuseWebClient(webClient);
+        }
+
+        private void ReuseWebClient(WebClient webClient)
+        {
+            if (webClient == null)
+                return;
+
+            this.webClientQueue.Enqueue(webClient);
         }
     }
 }
