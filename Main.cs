@@ -300,6 +300,7 @@ namespace TSWVote
 					// Correct answer was provided
 					// This means a vote is placed
 					args.Player.SendSuccessMessage("[TServerWeb] " + response.message);
+					VoteHooks.InvokeVoteSuccess(args.Player);
 					break;
 				case "failure":
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");

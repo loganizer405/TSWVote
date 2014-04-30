@@ -31,6 +31,7 @@ namespace TSWVote
 	public class VoteSuccessArgs : EventArgs
 	{
 		public TSPlayer Player;
+		public object Container; // In case handlers need to talk to each other
 
 		public VoteSuccessArgs(TSPlayer player)
 		{
