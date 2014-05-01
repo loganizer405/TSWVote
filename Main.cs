@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Threading;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
@@ -18,7 +17,9 @@ namespace TSWVote
 	[ApiVersion(1, 15)]
 	public class TSWVote : TerrariaPlugin
 	{
-		//private WebClient webClient; // Concurrency issues here
+		private const int NumberOfWebClientsAvailable = 30;
+
+		private ConcurrentQueue<VoteWC> webClientQueue;
 
 		public string ConfigPath
 		{
@@ -50,12 +51,15 @@ namespace TSWVote
 		{
 			Order = 1000;
 			WebRequest.DefaultWebProxy = null;
-			/*
-			this.webClient = new WebClient();
-			this.webClient.Proxy = null;
-			this.webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
-			this.webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
-			 */
+
+			webClientQueue = new ConcurrentQueue<VoteWC>();
+			for (int i = 0; i < NumberOfWebClientsAvailable; i++)
+			{
+				VoteWC webClient = new VoteWC() { Proxy = null };
+				webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
+				webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
+				webClientQueue.Enqueue(webClient);
+            }
 		}
 
 		public override void Initialize()
@@ -71,13 +75,16 @@ namespace TSWVote
 				ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
 				ServerApi.Hooks.ServerChat.Deregister(this, OnChat);
 
-				/*
-				if (this.webClient != null)
+				if (webClientQueue != null)
 				{
-					this.webClient.DownloadStringCompleted -= WebClient_DownloadStringCompleted;
-					this.webClient.Dispose();
+					VoteWC webClient;
+					while (this.webClientQueue.TryDequeue(out webClient))
+					{
+						webClient.DownloadStringCompleted -= WebClient_DownloadStringCompleted;
+						webClient.Dispose();
+					}
 				}
-				 */
+				 
 			}
 			base.Dispose(disposing);
 		}
@@ -137,17 +144,19 @@ namespace TSWVote
 				if (!GetServerID(out id, out message))
 					SendError("Configuration", message);
 			}
+
 			if (TShock.Config.RestApiEnabled == false)
 			{
 				SendError("REST API", "REST API Not Enabled! TSWVote plugin will not load!");
+				return;
 			}
-			else
-			{
-				// Commands.ChatCommands.Add(new Command("", Vote, "vote"));
-				Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
-				// This is so it will tell you if a new version is availiable.
-				Commands.ChatCommands.Add(new Command("vote.checkversion", CheckVersion, "tswversioncheck"));
-			}
+
+			Commands.ChatCommands.Add(new Command(delegate(CommandArgs e) { e.Player.SendErrorMessage("onChat handler by-pass!"); }, "vote"));
+			// We're making sure the command can be seen in /help. It does nothing though.
+
+			Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
+
+			Commands.ChatCommands.Add(new Command("vote.checkversion", CheckVersion, "tswversioncheck"));
 		}
 
 		private void CheckVersion(CommandArgs e)
@@ -155,13 +164,17 @@ namespace TSWVote
 			e.Player.SendInfoMessage(Version.ToString());
 		}
 
-		private void tswQuery(string url, object userToken = null) // Not sure if this works.
+		private bool tswQuery(string url, object userToken = null) // Not sure if this works.
 		{
 			Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
-			VoteWC WC = new VoteWC() { Proxy = null };
-			WC.Headers.Add("user-agent", "TServerWeb Vote Plugin");
-			WC.DownloadStringCompleted += WebClient_DownloadStringCompleted;
-			WC.DownloadStringAsync(uri, userToken);
+
+			VoteWC webClient;
+			if (this.webClientQueue.TryDequeue(out webClient))
+			{
+				webClient.DownloadStringAsync(uri, userToken);
+				return true;
+			}
+			return false;
 		}
 
 		private void validateCAPTCHA(CommandArgs e)
@@ -292,18 +305,35 @@ namespace TSWVote
 
 		private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
 		{
+			VoteWC webClient = sender as VoteWC;
+
 			CommandArgs args = e.UserState as CommandArgs;
+
 			if (args == null)
+			{
+				ReuseWC(webClient);
 				return;
+			}
 
 			if (e.Error != null)
 			{
 				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 				SendError("Exception", e.Error.Message);
+
+				ReuseWC(webClient);
 				return;
 			}
 
 			Response response = Response.Read(e.Result);
+			if (response == null)
+			{
+				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
+				SendError("Response", "Invalid response received.");
+
+				ReuseWC(webClient);
+				return;
+			}
+
 			switch (response.response)
 			{
 				case "success":
@@ -336,6 +366,14 @@ namespace TSWVote
 					SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
 					break;
 			}
+
+			ReuseWC(webClient);
+		}
+
+		private void ReuseWC(VoteWC WC)
+		{
+			if (WC == null) return;
+			webClientQueue.Enqueue(WC);
 		}
 
 		private class VoteWC : WebClient

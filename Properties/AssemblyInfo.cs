@@ -17,5 +17,5 @@ using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyVersion("2.0")] // <-- Change version here instead!
+[assembly: AssemblyVersion("2.1")] // <-- Change version here instead!
 [assembly: AssemblyFileVersion("1.0.0.0")]
