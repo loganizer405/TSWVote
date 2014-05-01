@@ -185,7 +185,11 @@ namespace TSWVote
 		{
 			VoteIP IP = IPs[e.Player.IP];
 
-			if (IP.State != VoteState.Captcha) return;
+			if (IP.State != VoteState.Captcha)
+			{
+				e.Player.SendSuccessMessage("[TServerWeb] You're not awaiting CAPTCHA.");
+				return;
+			}
 
 			int id;
 			string message;
