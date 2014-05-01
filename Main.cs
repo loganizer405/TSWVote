@@ -19,6 +19,8 @@ namespace TSWVote
 	{
 		private const int NumberOfWebClientsAvailable = 30;
 
+		private Dictionary<string, VoteIP> IPs = new Dictionary<string, VoteIP>();
+
 		private ConcurrentQueue<VoteWC> webClientQueue;
 
 		public string ConfigPath
@@ -111,6 +113,8 @@ namespace TSWVote
 				bool Space = M.Groups[1].Value == " ";
 				string Args = M.Groups[2].Value;
 
+				if (!IPs.ContainsKey(player.IP)) IPs.Add(player.IP, new VoteIP(DateTime.Now));
+
 				if (!string.IsNullOrWhiteSpace(Args) && Space)
 				{
 					e.Parameters.Add(Args);
@@ -164,7 +168,7 @@ namespace TSWVote
 			e.Player.SendInfoMessage(Version.ToString());
 		}
 
-		private bool tswQuery(string url, object userToken = null) // Not sure if this works.
+		private bool tswQuery(string url, object userToken = null)
 		{
 			Uri uri = new Uri("http://www.tserverweb.com/vote.php?" + url);
 
@@ -179,12 +183,17 @@ namespace TSWVote
 
 		private void validateCAPTCHA(CommandArgs e)
 		{
+			VoteIP IP = IPs[e.Player.IP];
+
+			if (IP.State != VoteState.Captcha) return;
+
 			int id;
 			string message;
 			if (!GetServerID(out id, out message))
 			{
 				e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
 				SendError("Configuration", message);
+				IP.Fail();
 				return;
 			}
 
@@ -197,15 +206,26 @@ namespace TSWVote
 
 		private void doVote(CommandArgs e)
 		{
+			VoteIP IP = IPs[e.Player.IP];
+
+			if (!IP.CanVote())
+			{
+				IP.NotifyPlayer(e.Player);
+				return;
+			}
+
 			int id;
 			string message;
 			if (!GetServerID(out id, out message))
 			{
 				e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
 				SendError("Configuration", message);
+				IP.Fail();
 				return;
 			}
 
+			IP.State = VoteState.InProgress;
+			IP.StateTime = DateTime.Now;
 			string url = string.Format("user={0}&sid={1}", HttpUtility.UrlPathEncode(e.Player.Name), id);
 			tswQuery(url, e);
 		}
@@ -228,6 +248,10 @@ namespace TSWVote
 			catch (Exception ex)
 			{
 				e.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
+
+				VoteIP IP = IPs[e.Player.IP];
+				IP.Fail();
+
 				SendError("Vote", "Connection failure: " + ex);
 			}
 		}
@@ -315,10 +339,14 @@ namespace TSWVote
 				return;
 			}
 
+			VoteIP IP = IPs[args.Player.IP];
+
 			if (e.Error != null)
 			{
 				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 				SendError("Exception", e.Error.Message);
+
+				IP.Fail();
 
 				ReuseWC(webClient);
 				return;
@@ -330,6 +358,8 @@ namespace TSWVote
 				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 				SendError("Response", "Invalid response received.");
 
+				IP.Fail();
+
 				ReuseWC(webClient);
 				return;
 			}
@@ -340,30 +370,47 @@ namespace TSWVote
 					// Correct answer was provided
 					// This means a vote is placed
 					args.Player.SendSuccessMessage("[TServerWeb] " + response.message);
-					VoteHooks.InvokeVoteSuccess(args.Player);
+					if (response.message != "Please wait 24 hours before voting for this server again!")
+					{
+						IP.State = VoteState.Success;
+						IP.StateTime = DateTime.Now;
+						VoteHooks.InvokeVoteSuccess(args.Player);
+					}
+					else
+					{
+						IP.State = VoteState.Wait;
+						IP.StateTime = DateTime.Now;
+					}
 					break;
 				case "failure":
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 					SendError("Vote", response.message);
+					IP.Fail();
 					break;
 				case "captcha":
 					args.Player.SendSuccessMessage("[TServerWeb] Please answer the question to make sure you are human.");
 					args.Player.SendSuccessMessage("[TServerWeb] You can type /vote <answer>");
 					args.Player.SendSuccessMessage("[TServerWeb] (CAPTCHA) " + response.message);
+					IP.State = VoteState.Captcha;
+					IP.StateTime = DateTime.Now;
 					break;
 				case "nocaptcha":
 					// Answer was provided, but there was no pending captcha
 					doVote(args);
 					SendError("Vote", response.message);
+					IP.Fail();
 					break;
 				case "captchafail":
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Reason: " + response.message);
+					IP.State = VoteState.None;
+					IP.StateTime = DateTime.Now;
 					break;
 				case "":
 				case null:
 				default:
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
 					SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
+					IP.Fail();
 					break;
 			}
 
