@@ -57,8 +57,7 @@ namespace TSWVote
 			webClientQueue = new ConcurrentQueue<VoteWC>();
 			for (int i = 0; i < NumberOfWebClientsAvailable; i++)
 			{
-				VoteWC webClient = new VoteWC() { Proxy = null };
-				webClient.Headers.Add("user-agent", "TServerWeb Vote Plugin");
+				VoteWC webClient = new VoteWC();
 				webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
 				webClientQueue.Enqueue(webClient);
             }
@@ -430,6 +429,13 @@ namespace TSWVote
 		private class VoteWC : WebClient
 		{
 			public static int Timeout = 2000; // Milliseconds
+
+			public VoteWC()
+			{
+				Proxy = null;
+				Headers.Add("user-agent", "TServerWeb Vote Plugin");
+			}
+
 			protected override WebRequest GetWebRequest(Uri uri)
 			{
 				WebRequest w = base.GetWebRequest(uri);
