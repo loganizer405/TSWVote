@@ -61,20 +61,20 @@ namespace TSWVote
 			switch (State)
 			{
 				case VoteState.Captcha:
-					Player.SendInfoMessage("[TServerWeb] Please enter CAPTCHA!");
+					Player.SendSuccessMessage("[TServerWeb] Please enter CAPTCHA!");
 					break;
 
 				case VoteState.Fail:
-					Player.SendErrorMessage("[TServerWeb] Your previous vote failed! Please wait 5 minutes before trying again!");
+					Player.SendSuccessMessage("[TServerWeb] Your previous vote failed! Please wait 5 minutes before trying again!");
 					break;
 
 				case VoteState.InProgress:
-					Player.SendInfoMessage("[TServerWeb] Your vote is being processed, please wait...");
+					Player.SendSuccessMessage("[TServerWeb] Your vote is being processed, please wait...");
 					break;
 
 				case VoteState.Success:
 				case VoteState.Wait:
-					Player.SendInfoMessage("[TServerWeb] Please wait 24 hours before voting for this server again!");
+					Player.SendSuccessMessage("[TServerWeb] Please wait 24 hours before voting for this server again!");
 					break;
 			}
 		}
