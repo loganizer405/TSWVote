@@ -64,8 +64,8 @@ namespace TSWVote
 
 		public override void Initialize()
 		{
-			ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
-			ServerApi.Hooks.ServerChat.Register(this, OnChat);
+			ServerApi.Hooks.GameInitialize.Register(this, OnInitialize, -1);
+			ServerApi.Hooks.ServerChat.Register(this, OnChat, 1000);
 		}
 
 		protected override void Dispose(bool disposing)
