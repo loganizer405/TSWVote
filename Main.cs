@@ -199,8 +199,8 @@ namespace TSWVote
                 return;
             }
 
-            string answer = HttpUtility.UrlPathEncode(e.Parameters[0].ToString());
-            string playerName = HttpUtility.UrlPathEncode(e.Player.Name);
+            string answer = Uri.EscapeDataString(e.Parameters[0].ToString());
+            string playerName = Uri.EscapeDataString(e.Player.Name);
 
             string url = "answer=" + answer + "&user=" + playerName + "&sid=" + id;
             if (!tswQuery(url, e))
@@ -221,7 +221,7 @@ namespace TSWVote
                 return;
             }
 
-            string url = "user=" + HttpUtility.UrlPathEncode(e.Player.Name) + "&sid=" + id;
+            string url = "user=" + Uri.EscapeDataString(e.Player.Name) + "&sid=" + id;
             if (!tswQuery(url, e))
             {
                 // this happens when there are more than NumberOfWebClientsAvailable requests being executed at once
