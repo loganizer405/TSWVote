@@ -9,7 +9,6 @@ using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using Newtonsoft.Json;
-using System.Web;
 using System.Net;
 
 namespace TSWVote
@@ -186,7 +185,7 @@ namespace TSWVote
 
 			if (IP.State != VoteState.Captcha)
 			{
-				e.Player.SendSuccessMessage("[TServerWeb] You're not awaiting CAPTCHA.");
+				e.Player.SendSuccessMessage("[TServerWeb] We're not awaiting CAPTCHA from you, do /vote first.");
 				return;
 			}
 
@@ -200,8 +199,8 @@ namespace TSWVote
 				return;
 			}
 
-			string answer = HttpUtility.UrlPathEncode(e.Parameters[0].ToString());
-			string playerName = HttpUtility.UrlPathEncode(e.Player.Name);
+			string answer = Uri.EscapeDataString(e.Parameters[0].ToString());
+			string playerName = Uri.EscapeDataString(e.Player.Name);
 
 			string url = string.Format("answer={0}&user={1}&sid={2}", answer, playerName, id);
 			tswQuery(url, e);
@@ -229,7 +228,7 @@ namespace TSWVote
 
 			IP.State = VoteState.InProgress;
 			IP.StateTime = DateTime.Now;
-			string url = string.Format("user={0}&sid={1}", HttpUtility.UrlPathEncode(e.Player.Name), id);
+			string url = string.Format("user={0}&sid={1}", Uri.EscapeDataString(e.Player.Name), id);
 			tswQuery(url, e);
 		}
 
