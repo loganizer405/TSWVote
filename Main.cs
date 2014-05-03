@@ -153,7 +153,7 @@ namespace TSWVote
 				return;
 			}
 
-			Commands.ChatCommands.Add(new Command(delegate(CommandArgs e) { e.Player.SendErrorMessage("onChat handler by-pass!"); }, "vote"));
+			Commands.ChatCommands.Add(new Command(delegate { }, "vote"));
 			// We're making sure the command can be seen in /help. It does nothing though.
 
 			Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
@@ -193,9 +193,7 @@ namespace TSWVote
 			string message;
 			if (!GetServerID(out id, out message))
 			{
-				e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
-				SendError("Configuration", message);
-				IP.Fail();
+				Fail("Configuration", message, e.Player, IP);
 				return;
 			}
 
@@ -220,9 +218,7 @@ namespace TSWVote
 			string message;
 			if (!GetServerID(out id, out message))
 			{
-				e.Player.SendErrorMessage("[TServerWeb] Vote failed, please contact an admin.");
-				SendError("Configuration", message);
-				IP.Fail();
+				Fail("Configuration", message, e.Player, IP);
 				return;
 			}
 
@@ -249,12 +245,7 @@ namespace TSWVote
 			}
 			catch (Exception ex)
 			{
-				e.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-
-				VoteIP IP = IPs[e.Player.IP];
-				IP.Fail();
-
-				SendError("Vote", "Connection failure: " + ex);
+				Fail("Vote", "Connection failure: " + ex, e.Player);
 			}
 		}
 
@@ -345,10 +336,7 @@ namespace TSWVote
 
 			if (e.Error != null)
 			{
-				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-				SendError("Exception", e.Error.Message);
-
-				IP.Fail();
+				Fail("Exception", e.Error.Message, args.Player, IP);
 
 				ReuseWC(webClient);
 				return;
@@ -357,10 +345,7 @@ namespace TSWVote
 			Response response = Response.Read(e.Result);
 			if (response == null)
 			{
-				args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-				SendError("Response", "Invalid response received.");
-
-				IP.Fail();
+				Fail("Response", "Invalid response received.", args.Player, IP);
 
 				ReuseWC(webClient);
 				return;
@@ -385,9 +370,7 @@ namespace TSWVote
 					}
 					break;
 				case "failure":
-					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-					SendError("Vote", response.message);
-					IP.Fail();
+					Fail("Vote", response.message, args.Player, IP);
 					break;
 				case "captcha":
 					args.Player.SendSuccessMessage("[TServerWeb] Please answer the question to make sure you are human.");
@@ -398,9 +381,8 @@ namespace TSWVote
 					break;
 				case "nocaptcha":
 					// Answer was provided, but there was no pending captcha
-					doVote(args);
-					SendError("Vote", response.message);
-					IP.Fail();
+					//Let's consider it a fail, since plugin has VoteStates to prevent this from happening
+					Fail("Vote", response.message, args.Player, IP);
 					break;
 				case "captchafail":
 					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Reason: " + response.message);
@@ -410,9 +392,7 @@ namespace TSWVote
 				case "":
 				case null:
 				default:
-					args.Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-					SendError("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.");
-					IP.Fail();
+					Fail("Connection", "Response is blank, something is wrong with connection. Please email contact@tserverweb.com about this issue.", args.Player, IP);
 					break;
 			}
 
@@ -423,6 +403,15 @@ namespace TSWVote
 		{
 			if (WC == null) return;
 			webClientQueue.Enqueue(WC);
+		}
+
+		internal void Fail(string typeoffailure, string message, TSPlayer Player, VoteIP IP = null)
+		{
+			SendError(typeoffailure, message);
+			if (Player == null || !Player.Active) return;
+			Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
+			if (IP == null) IP = IPs[Player.IP];
+			IP.Fail();
 		}
 
 		private class VoteWC : WebClient
