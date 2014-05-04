@@ -20,7 +20,10 @@ namespace TSWVote
 			{
 				R = JsonConvert.DeserializeObject<Response>(text);
 			}
-			catch { }
+			catch 
+			{
+				TShockAPI.Log.Error("Error parsing as JSON: " + text);
+			}
 
 			return R;
 		}
