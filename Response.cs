@@ -14,14 +14,15 @@ namespace TSWVote
 
 		public static Response Read(string text)
 		{
+			Response R = null;
+
 			try
 			{
-				return JsonConvert.DeserializeObject<Response>(text);
+				R = JsonConvert.DeserializeObject<Response>(text);
 			}
-			catch
-			{
-				return null;
-			}
+			catch { }
+
+			return R;
 		}
 	}
 }
