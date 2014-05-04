@@ -201,7 +201,15 @@ namespace TSWVote
 			string playerName = Uri.EscapeDataString(e.Player.Name);
 
 			string url = string.Format("answer={0}&user={1}&sid={2}", answer, playerName, id);
-			tswQuery(url, e);
+
+			try
+			{
+				tswQuery(url, e);
+			}
+			catch (Exception ex)
+			{
+				Fail("validateCaptcha", "Attempt to send the query threw an exception: " + ex.Message, e.Player, IP);
+			}
 		}
 
 		private void doVote(CommandArgs e)
@@ -225,7 +233,15 @@ namespace TSWVote
 			IP.State = VoteState.InProgress;
 			IP.StateTime = DateTime.Now;
 			string url = string.Format("user={0}&sid={1}", Uri.EscapeDataString(e.Player.Name), id);
-			tswQuery(url, e);
+
+			try
+			{
+				tswQuery(url, e);
+			}
+			catch (Exception ex)
+			{
+				Fail("doVote", "Attempt to send the query threw an exception: " + ex.Message, e.Player, IP);
+			}
 		}
 
 		private void Vote(CommandArgs e) // To be fair this should also have a permission.
