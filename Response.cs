@@ -22,8 +22,8 @@ namespace TSWVote
 			}
 			catch (Exception ex)
 			{
-				TShockAPI.Log.Error(ex.Message);
-				TShockAPI.Log.Error("Error parsing as JSON: " + text);
+				//TShockAPI.Log.Error(ex.Message);
+				//TShockAPI.Log.Error("Error parsing as JSON: " + text);
 			}
 
 			return R;
