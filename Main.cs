@@ -444,6 +444,8 @@ namespace TSWVote
 			{
 				WebRequest w = base.GetWebRequest(uri);
 				w.Timeout = Timeout;
+				w.Headers.Add("user-agent", "TServerWeb Vote Plugin"); // Making sure we send user agent?
+
 				return w;
 			}
 		}
