@@ -437,7 +437,7 @@ namespace TSWVote
 			public VoteWC()
 			{
 				Proxy = null;
-				Headers.Add("user-agent", "TServerWeb Vote Plugin");
+				//Headers.Add("user-agent", "TServerWeb Vote Plugin");
 			}
 
 			protected override WebRequest GetWebRequest(Uri uri)
