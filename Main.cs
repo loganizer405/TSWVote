@@ -442,9 +442,9 @@ namespace TSWVote
 
 			protected override WebRequest GetWebRequest(Uri uri)
 			{
-				WebRequest w = base.GetWebRequest(uri);
+				HttpWebRequest w = base.GetWebRequest(uri) as HttpWebRequest;
 				w.Timeout = Timeout;
-				w.Headers.Add("user-agent", "TServerWeb Vote Plugin"); // Making sure we send user agent?
+				w.UserAgent = "TServerWeb Vote Plugin";
 
 				return w;
 			}
