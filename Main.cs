@@ -13,7 +13,7 @@ using System.Net;
 
 namespace TSWVote
 {
-	[ApiVersion(1, 15)]
+	[ApiVersion(1, 16)]
 	public class TSWVote : TerrariaPlugin
 	{
 		private const int NumberOfWebClientsAvailable = 30;
