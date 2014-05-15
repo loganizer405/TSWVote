@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using System.Linq;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
@@ -159,6 +160,55 @@ namespace TSWVote
 			Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
 
 			Commands.ChatCommands.Add(new Command("vote.checkversion", CheckVersion, "tswversioncheck"));
+
+			Commands.ChatCommands.Add(new Command("vote.admin", Clear, "voteclear"));
+		}
+
+		private void Clear(CommandArgs e)
+		{
+			if (e.Parameters.Count == 0)
+			{
+				if (IPs.ContainsKey(e.Player.IP) && IPs[e.Player.IP].State != VoteState.None)
+				{
+					e.Player.SendSuccessMessage(string.Format("[TServerWeb] Removed state {0} from IP {1} succesfully.", IPs[e.Player.IP].State, e.Player.IP));
+					IPs.Remove(e.Player.IP);
+				}
+				else
+					e.Player.SendSuccessMessage(string.Format("[TServerWeb] No state for IP {0} found.", e.Player.IP));
+				return;
+			}
+
+			string Target = string.Join(" ", e.Parameters);
+
+			if (Target == "all")
+			{
+				IPs.Clear();
+				e.Player.SendSuccessMessage("[TServerWeb] Reset all votestates!");
+			}
+
+			List<TSPlayer> Ts = TShock.Players.Where(p => (p != null && p.Active && p.Name.StartsWith(Name))).ToList();
+
+			if (Ts.Count == 0)
+			{
+				e.Player.SendSuccessMessage("[TServerWeb] No players matched!");
+			}
+
+			if (Ts.Count == 1)
+			{
+				TSPlayer T = Ts[0];
+
+				if (IPs.ContainsKey(T.IP) && IPs[T.IP].State != VoteState.None)
+				{
+					e.Player.SendSuccessMessage(string.Format("[TServerWeb] Removed state {0} from IP {1} succesfully.", IPs[T.IP].State, T.IP));
+					IPs.Remove(T.IP);
+				}
+				else
+					e.Player.SendSuccessMessage(string.Format("[TServerWeb] No state for IP {0} found.", T.IP));
+				return;
+			}
+			
+			string TNames = string.Join(", ", Ts.Select(p => p.Name));
+			e.Player.SendSuccessMessage(string.Format("[TServerWeb] Matched multiple players: {0}.", TNames));
 		}
 
 		private void CheckVersion(CommandArgs e)
