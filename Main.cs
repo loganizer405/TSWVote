@@ -187,7 +187,7 @@ namespace TSWVote
 				return;
 			}
 
-			List<TSPlayer> Ts = TShock.Players.Where(p => (p != null && p.Active && p.Name.StartsWith(Name.ToLower()))).ToList();
+			List<TSPlayer> Ts = TShock.Players.Where(p => (p != null && p.Active && p.Name.StartsWith(Target.ToLower()))).ToList();
 
 			if (Ts.Count == 0)
 			{
