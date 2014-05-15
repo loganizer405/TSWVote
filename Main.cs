@@ -234,6 +234,7 @@ namespace TSWVote
 
 		private void validateCAPTCHA(CommandArgs e)
 		{
+			if (!IPs.ContainsKey(e.Player.IP)) IPs[e.Player.IP] = new VoteIP(DateTime.Now);
 			VoteIP IP = IPs[e.Player.IP];
 
 			if (IP.State != VoteState.Captcha)
@@ -267,6 +268,7 @@ namespace TSWVote
 
 		private void doVote(CommandArgs e)
 		{
+			if (!IPs.ContainsKey(e.Player.IP)) IPs[e.Player.IP] = new VoteIP(DateTime.Now);
 			VoteIP IP = IPs[e.Player.IP];
 
 			if (!IP.CanVote())
@@ -401,6 +403,7 @@ namespace TSWVote
 				return;
 			}
 
+			if (!IPs.ContainsKey(args.Player.IP)) IPs[args.Player.IP] = new VoteIP(DateTime.Now);
 			VoteIP IP = IPs[args.Player.IP];
 
 			if (e.Error != null)
@@ -479,8 +482,11 @@ namespace TSWVote
 			SendError(typeoffailure, message);
 			if (Player == null || !Player.Active) return;
 			Player.SendErrorMessage("[TServerWeb] Vote failed! Please contact an administrator.");
-			if (IP == null) IP = IPs[Player.IP];
-			IP.Fail();
+			if (IPs.ContainsKey(Player.IP))
+			{
+				if (IP == null) IP = IPs[Player.IP];
+				IP.Fail();
+			}
 		}
 
 		private class VoteWC : WebClient
