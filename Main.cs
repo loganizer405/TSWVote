@@ -178,19 +178,21 @@ namespace TSWVote
 				return;
 			}
 
-			string Target = string.Join(" ", e.Parameters);
+			string Target = string.Join(" ", e.Parameters).ToLower();
 
 			if (Target == "all")
 			{
 				IPs.Clear();
 				e.Player.SendSuccessMessage("[TServerWeb] Reset all votestates!");
+				return;
 			}
 
-			List<TSPlayer> Ts = TShock.Players.Where(p => (p != null && p.Active && p.Name.StartsWith(Name))).ToList();
+			List<TSPlayer> Ts = TShock.Players.Where(p => (p != null && p.Active && p.Name.StartsWith(Name.ToLower()))).ToList();
 
 			if (Ts.Count == 0)
 			{
 				e.Player.SendSuccessMessage("[TServerWeb] No players matched!");
+				return;
 			}
 
 			if (Ts.Count == 1)
@@ -204,6 +206,7 @@ namespace TSWVote
 				}
 				else
 					e.Player.SendSuccessMessage(string.Format("[TServerWeb] No state for IP {0} found.", T.IP));
+
 				return;
 			}
 			
