@@ -92,10 +92,8 @@ namespace TSWVote
 
 		private void OnChat(ServerChatEventArgs args)
 		{
-			if (!args.Text.StartsWith("/"))
-			{
+			if (!args.Text.StartsWith("/vote"))
 				return;
-			}
 
 			var player = TShock.Players[args.Who];
 
