@@ -103,7 +103,7 @@ namespace TSWVote
 				return;
 			}
 
-			Match M = Regex.Match(args.Text, "/vote( ?)(.*)", RegexOptions.IgnoreCase);
+			Match M = Regex.Match(args.Text, "^/vote( ?)(.*)$", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
