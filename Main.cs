@@ -89,7 +89,7 @@ namespace TSWVote
 
 		private void OnChat(ServerChatEventArgs args)
 		{
-			if (!args.Text.StartsWith("/vote "))
+			if (!args.Text.StartsWith("/vote"))
 				return;
 
 			var player = TShock.Players[args.Who];
@@ -100,15 +100,15 @@ namespace TSWVote
 				return;
 			}
 
-			if (TSWConfig.RequirePermission && !player.Group.HasPermission(TSWConfig.PermissionName))
-			{
-				player.SendSuccessMessage("[TServerWeb] You don't have permission to vote!");
-				return;
-			}
-
 			Match M = Regex.Match(args.Text, "^/vote(?: (.*))?$", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
+				if (TSWConfig.RequirePermission && !player.Group.HasPermission(TSWConfig.PermissionName))
+				{
+					player.SendSuccessMessage("[TServerWeb] You don't have permission to vote!");
+					return;
+				}
+
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
 				string Args = M.Groups[1].Value;
 
