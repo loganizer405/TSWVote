@@ -8,7 +8,7 @@ namespace TSWVote
 {
 	internal class Config
 	{
-		internal static string ConfigPath
+		internal static string cPath
 		{
 			get { return Path.Combine(TShock.SavePath, "TSWVote.json"); }
 		}
@@ -16,18 +16,20 @@ namespace TSWVote
 		internal int ServerID = 0;
 		internal int NumberOfWebClients = 30;
 		internal int Timeout = 2000;
+		internal bool RequirePermission = false;
+		internal string PermissionName = "vote.vote";
 
 		internal static Config Read()
 		{
-			if (!File.Exists(ConfigPath))
-				File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(new Config()));
+			if (!File.Exists(cPath))
+				File.WriteAllText(cPath, JsonConvert.SerializeObject(new Config(), Formatting.Indented));
 
-			return JsonConvert.DeserializeObject<Config>(File.ReadAllText(ConfigPath));
+			return JsonConvert.DeserializeObject<Config>(File.ReadAllText(cPath));
 		}
 
 		internal void Write()
 		{
-			File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(this));
+			File.WriteAllText(cPath, JsonConvert.SerializeObject(this, Formatting.Indented));
 		}
 	}
 }

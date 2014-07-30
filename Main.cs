@@ -17,17 +17,6 @@ namespace TSWVote
 	[ApiVersion(1, 16)]
 	public class TSWVote : TerrariaPlugin
 	{
-		private const int NumberOfWebClientsAvailable = 30;
-
-		private Dictionary<string, VoteIP> IPs = new Dictionary<string, VoteIP>();
-
-		private ConcurrentQueue<VoteWC> webClientQueue;
-
-		public string ConfigPath
-		{
-			get { return Path.Combine(TShock.SavePath, "TSWVote.txt"); }
-		}
-
 		public override string Name
 		{
 			get { return "TServerWebVote"; }
@@ -35,7 +24,7 @@ namespace TSWVote
 
 		public override string Author
 		{
-			get { return "Loganizer + XGhozt"; }
+			get { return "Community"; }
 		}
 
 		public override string Description
@@ -48,14 +37,22 @@ namespace TSWVote
 			get { return Assembly.GetExecutingAssembly().GetName().Version; }
 		}
 
+		private Dictionary<string, VoteIP> IPs = new Dictionary<string, VoteIP>();
+
+		private ConcurrentQueue<VoteWC> webClientQueue;
+
+		internal static Config TSWConfig { get; private set; }
+
 		public TSWVote(Main game)
 			: base(game)
 		{
 			Order = 1000;
 			WebRequest.DefaultWebProxy = null;
 
+			TSWConfig = Config.Read();
+
 			webClientQueue = new ConcurrentQueue<VoteWC>();
-			for (int i = 0; i < NumberOfWebClientsAvailable; i++)
+			for (int i = 0; i < TSWConfig.NumberOfWebClients; i++)
 			{
 				VoteWC webClient = new VoteWC();
 				webClient.DownloadStringCompleted += WebClient_DownloadStringCompleted;
@@ -92,7 +89,7 @@ namespace TSWVote
 
 		private void OnChat(ServerChatEventArgs args)
 		{
-			if (!args.Text.StartsWith("/vote"))
+			if (!args.Text.StartsWith("/vote "))
 				return;
 
 			var player = TShock.Players[args.Who];
@@ -103,48 +100,51 @@ namespace TSWVote
 				return;
 			}
 
-			Match M = Regex.Match(args.Text, "^/vote( ?)(.*)$", RegexOptions.IgnoreCase);
+			if (TSWConfig.RequirePermission && !player.Group.HasPermission(TSWConfig.PermissionName))
+			{
+				player.SendSuccessMessage("[TServerWeb] You don't have permission to vote!");
+				return;
+			}
+
+			Match M = Regex.Match(args.Text, "^/vote(?: (.*))?$", RegexOptions.IgnoreCase);
 			if (M.Success)
 			{
 				CommandArgs e = new CommandArgs(args.Text, player, new List<string>());
-				bool Space = M.Groups[1].Value == " ";
-				string Args = M.Groups[2].Value;
+				string Args = M.Groups[1].Value;
 
 				if (!IPs.ContainsKey(player.IP)) IPs.Add(player.IP, new VoteIP(DateTime.Now));
 
-				if (!string.IsNullOrWhiteSpace(Args) && Space)
+				if (!string.IsNullOrWhiteSpace(Args))
 				{
 					e.Parameters.Add(Args);
 					TSPlayer.Server.SendMessage(player.Name + " has entered /vote captcha.", 255, 255, 255);
 					Vote(e);
 					args.Handled = true;
+					return;
 				}
-				else if (string.IsNullOrWhiteSpace(Args))
-				{
-					TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
-					Vote(e);
-					args.Handled = true;
-				}
+
+				TSPlayer.Server.SendMessage(player.Name + " executed: /vote.", 255, 255, 255);
+				Vote(e);
+				args.Handled = true;
 			}
 		}
 
 		private void OnInitialize(EventArgs args)
 		{
-			if (!File.Exists(ConfigPath))
+			try
 			{
-				string[] text = {"**This is the configuration file, please do not edit.**", "Help page: http://www.tserverweb.com/help/",
-									"Server ID is on next line. Please DO NOT edit the following line, change it using \"/tserverweb [ID] in-game\"",
-								"0"};
+				TSWConfig = Config.Read();
+			}
+			catch
+			{
+				SendError("Config", "Config file is broken! TSWVote plugin will not load!");
+				return;
+			}
 
-				File.WriteAllLines(ConfigPath, text);
-			}
-			else
-			{
-				int id;
-				string message;
-				if (!GetServerID(out id, out message))
-					SendError("Configuration", message);
-			}
+			int id;
+			string message;
+			if (!GetServerID(out id, out message))
+				SendError("Configuration", message);
 
 			if (TShock.Config.RestApiEnabled == false)
 			{
@@ -152,8 +152,8 @@ namespace TSWVote
 				return;
 			}
 
-			Commands.ChatCommands.Add(new Command(delegate { }, "vote"));
-			// We're making sure the command can be seen in /help. It does nothing though.
+			Commands.ChatCommands.Add(new Command(TSWConfig.RequirePermission ? TSWConfig.PermissionName : null, delegate { }, "vote"));
+			// ^ We're making sure the command can be seen in /help. It does nothing though.
 
 			Commands.ChatCommands.Add(new Command("vote.changeid", ChangeID, "tserverweb"));
 
@@ -302,15 +302,9 @@ namespace TSWVote
 			try
 			{
 				if (e.Parameters.Count == 0)
-				{
-					// Send the vote
-					doVote(e);
-				}
+					doVote(e); // Send the vote
 				else
-				{
-					// Answer was provided
-					validateCAPTCHA(e);
-				}
+					validateCAPTCHA(e); // Answer was provided
 			}
 			catch (Exception ex)
 			{
@@ -326,8 +320,7 @@ namespace TSWVote
 				string message;
 				if (!GetServerID(out id, out message))
 				{
-					e.Player.SendErrorMessage("[TServerWeb] Server ID is currently not specified! Please type /tserverweb [number] to set it. Reason:");
-					e.Player.SendErrorMessage(message);
+					e.Player.SendErrorMessage("[TServerWeb] Server ID is currently not specified! Please type /tserverweb [number] to set it.");
 					return;
 				}
 
@@ -344,14 +337,9 @@ namespace TSWVote
 			int newId;
 			if (int.TryParse(e.Parameters[0], out newId))
 			{
-				string[] text =
-				{
-					"**This is the configuration file, please do not edit.**", "Help page: http://www.tserverweb.com/help/",
-					"Server ID is on next line. Please DO NOT edit the following line, change it using \"/tserverweb [ID] in-game\"",
-					newId.ToString()
-				};
+				TSWConfig.ServerID = newId;
+				TSWConfig.Write();
 
-				File.WriteAllLines(ConfigPath, text);
 				e.Player.SendInfoMessage("[TServerWeb] Server ID successfully changed to " + newId + "!");
 				return;
 			}
@@ -362,31 +350,21 @@ namespace TSWVote
 		private void SendError(string typeoffailure, string message)
 		{
 			string Error = string.Format("[TServerWeb] TSWVote Error: {0} failure. Reason: {1}", typeoffailure, message);
-			Log.Error(Error);
-			TSPlayer.Server.SendErrorMessage(Error);
+			Log.ConsoleError(Error);
 		}
 
 		private bool GetServerID(out int id, out string message)
 		{
-			string[] stringid = File.ReadAllLines(ConfigPath);
-			foreach (string str in stringid)
-			{
-				if (int.TryParse(str, out id))
-				{
-					if (id == 0)
-					{
-						message = "Server ID not specified. Type /tserverweb [ID] to specify it.";
-						return false;
-					}
+			id = TSWConfig.ServerID;
+			message = String.Empty;
 
-					message = string.Empty;
-					return true;
-				}
+			if (id == 0)
+			{
+				message = "Server ID not specified. Type /tserverweb [ID] to specify it.";
+				return false;
 			}
 
-			id = 0;
-			message = "Server ID is not a number. Please type /tserverweb [ID] to set it.";
-			return false;
+			return true;
 		}
 
 		private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
@@ -489,12 +467,17 @@ namespace TSWVote
 
 		private class VoteWC : WebClient
 		{
-			public static int Timeout = 2000; // Milliseconds
+			public static int Timeout
+			{
+				get
+				{
+					return TSWConfig == null ? 2000 : TSWConfig.Timeout;
+				}
+			}
 
 			public VoteWC()
 			{
 				Proxy = null;
-				//Headers.Add("user-agent", "TServerWeb Vote Plugin");
 			}
 
 			protected override WebRequest GetWebRequest(Uri uri)
