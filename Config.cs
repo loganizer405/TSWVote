@@ -13,11 +13,11 @@ namespace TSWVote
 			get { return Path.Combine(TShock.SavePath, "TSWVote.json"); }
 		}
 
-		internal int ServerID = 0;
-		internal int NumberOfWebClients = 30;
-		internal int Timeout = 2000;
-		internal bool RequirePermission = false;
-		internal string PermissionName = "vote.vote";
+		public int ServerID = 0;
+		public int NumberOfWebClients = 30;
+		public int Timeout = 2000;
+		public bool RequirePermission = false;
+		public string PermissionName = "vote.vote";
 
 		internal static Config Read()
 		{
