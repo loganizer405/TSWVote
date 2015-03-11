@@ -14,7 +14,7 @@ using System.Net;
 
 namespace TSWVote
 {
-	[ApiVersion(1, 16)]
+	[ApiVersion(1, 17)]
 	public class TSWVote : TerrariaPlugin
 	{
 		public override string Name
@@ -350,7 +350,7 @@ namespace TSWVote
 		private void SendError(string typeoffailure, string message)
 		{
 			string Error = string.Format("[TServerWeb] TSWVote Error: {0} failure. Reason: {1}", typeoffailure, message);
-			Log.ConsoleError(Error);
+			TShock.Log.ConsoleError(Error);
 		}
 
 		private bool GetServerID(out int id, out string message)
