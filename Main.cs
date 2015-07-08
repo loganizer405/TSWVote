@@ -14,7 +14,7 @@ using System.Net;
 
 namespace TSWVote
 {
-	[ApiVersion(1, 17)]
+	[ApiVersion(1, 18)]
 	public class TSWVote : TerrariaPlugin
 	{
 		public override string Name
@@ -429,7 +429,7 @@ namespace TSWVote
 					break;
 				case "nocaptcha":
 					// Answer was provided, but there was no pending captcha
-					//Let's consider it a fail, since plugin has VoteStates to prevent this from happening
+					// Let's consider it a fail, since plugin has VoteStates to prevent this from happening
 					Fail("Vote", response.message, args.Player, IP);
 					break;
 				case "captchafail":
