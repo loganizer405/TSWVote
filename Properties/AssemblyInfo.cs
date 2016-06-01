@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("")]
-[assembly: AssemblyCopyright("© 2014 Loganizer & Simon311 & IcyPhoenix")]
+[assembly: AssemblyCopyright("© 2014-2016 Loganizer & Simon311 & IcyPhoenix")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
