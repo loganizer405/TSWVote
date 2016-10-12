@@ -1,20 +1,17 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using System.Linq;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
-using Newtonsoft.Json;
 using System.Net;
 
 namespace TSWVote
 {
-	[ApiVersion(1, 23)]
+	[ApiVersion(1, 25)]
 	public class TSWVote : TerrariaPlugin
 	{
 		public override string Name
